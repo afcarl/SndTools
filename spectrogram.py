@@ -40,14 +40,12 @@ def main():
 
         img = spectrogram.view(samples_read)
         cv.ShowImage("Spectrogram", img)
-        key = cv.WaitKey(5)
+        key = chr(cv.WaitKey(5) & 255)
 
-        # Hack: Press ' ' to pause
-        #       Press 'r' to reverse direction
-        if key == 1048608:  # ' '
-            while cv.WaitKey(-1) != 1048608:
+        if key == ' ':
+            while chr(cv.WaitKey(-1) & 255) != ' ':
                 pass
-        if key == 1048690:  # 'r'
+        if key == 'r':
             direction = -1*direction
 
     cv.WaitKey(-1)
