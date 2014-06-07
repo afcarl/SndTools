@@ -8,15 +8,17 @@ something new and build my own toolset.
 
 ## Requirements
 
-Linux is targeted and I have no plans to test on other systems. Some features
-like sound conversion will probably only work on Linux. Let me know if you're
-testing on another system.
+Linux is targeted and I have no plans to test on other systems. It's written in
+Python, so most things probably work cross platform, but some features like
+sound conversion will probably only work on Linux. Let me know if you're
+testing on another system, or have any interest in fixing cross-platform
+problems.
 
 You'll need these external dependencies:
 
 * [OpenCV](http://opencv.org/) - The "cv" python package. Used for image
     processing and display.
-* [PyAudio] - Python bindings for PortAudio. Used for playing sound.
+* [PyAudio](http://people.csail.mit.edu/hubert/pyaudio/) - Python bindings for PortAudio. Used for playing sound.
 * [VLC media player](https://www.videolan.org/vlc/) - Used to convert between
     sound file formats. Required for now, but will be optional in the future.
 
