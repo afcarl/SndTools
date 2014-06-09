@@ -8,6 +8,13 @@ import cv
 
 import sndtools
 
+CONTROLS_HELP = """
+Controls:
+    Space - Pause
+      q   - Quit
+      r   - Reverse direction
+"""
+
 
 def main():
 
@@ -31,24 +38,28 @@ def main():
                     rate=sample_rate,
                     output=True)
 
+    print CONTROLS_HELP
+
     direction = 1
+    paused = False
     samples_read = 0
-    while samples_read < len(data):
-        next_samples_read = max(min(len(data), samples_read + direction*2048), 0)
-        stream.write(data[samples_read:next_samples_read:direction].tostring())
-        samples_read = next_samples_read
+    while True:
+
+        if not paused:
+            next_samples_read = max(min(len(data), samples_read + direction*2048), 0)
+            stream.write(data[samples_read:next_samples_read:direction].tostring())
+            samples_read = next_samples_read
 
         img = spectrogram.view(samples_read)
         cv.ShowImage("Spectrogram", img)
         key = chr(cv.WaitKey(5) & 255)
 
         if key == ' ':
-            while chr(cv.WaitKey(-1) & 255) != ' ':
-                pass
-        if key == 'r':
+            paused = not paused
+        elif key in ['r', 'R']:
             direction = -1*direction
-
-    cv.WaitKey(-1)
+        elif key in ['q', 'Q']:
+            break
 
     stream.stop_stream()
     stream.close()
