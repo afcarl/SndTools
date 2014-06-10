@@ -8,7 +8,7 @@ VLC_COMMAND = "vlc"
 
 
 def read(filename):
-    '''Returns (sample_rate, data) tuple for the given sound file.
+    """Returns (sample_rate, data) tuple for the given sound file.
 
     Sample width is always 2 bytes, so data is a list of integers between
     -32767 to 32768.
@@ -20,7 +20,7 @@ def read(filename):
     TODO: Alternatively use mencoder.
     TODO: What about stereo sound files?
 
-    '''
+    """
 
     # Convert to wav 16 bit
     wav_filename = tempfile.mkstemp()[1]
@@ -28,6 +28,7 @@ def read(filename):
         '-I', 'dummy',
         '-q', filename,
         '--sout', '#transcode{{acodec=s16l,channels=1}}:standard{{mux=wav,dst="{}",access=file}}'.format(wav_filename),
+        "--album-art", "0",  # Don't search for album art, stupid!
         'vlc://quit',
     ]
     subprocess.check_output(command)
