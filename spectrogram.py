@@ -29,7 +29,8 @@ def main():
     if len(data.shape) > 1:
         data = data.transpose()[0]
 
-    spectrogram = sndtools.spectrogram.Spectrogram(data, window_width, window_step, 1366)
+    spectrogram = sndtools.spectrogram.Spectrogram(data, window_width, window_step)
+    spec_view = sndtools.spectrogram.SpectrogramView(spectrogram, 1366)
     cv.NamedWindow("Spectrogram")
 
     p = pyaudio.PyAudio()
@@ -50,7 +51,7 @@ def main():
             stream.write(data[samples_read:next_samples_read:direction].tostring())
             samples_read = next_samples_read
 
-        img = spectrogram.view(samples_read)
+        img = spec_view.view(samples_read)
         cv.ShowImage("Spectrogram", img)
         key = chr(cv.WaitKey(5) & 255)
 
