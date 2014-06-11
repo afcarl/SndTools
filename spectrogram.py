@@ -1,7 +1,13 @@
 #!/usr/bin/python2
+"""Generate and output a spectrogram.
+
+The spectrogram is a representation of frequency over time. It shows a fourier
+transform of sound samples as a window is moved through the data. The
+spectrogram image shows time on the x axis and frequency on the y axis, with
+the intensity of the pixel showing the intensity of that frequency sound.
+"""
 
 from __future__ import division
-import sys
 
 import pyaudio
 import cv
@@ -16,21 +22,8 @@ Controls:
 """
 
 
-def main():
-
-    # TODO: Actual argument parsing
-    sample_rate, data = sndtools.io.read(sys.argv[1])
-
-    # Window measured in number of samples
-    window_width = 20 / 1000 * sample_rate
-    window_step = 5 / 1000 * sample_rate
-
-    # If stereo, take left channel
-    if len(data.shape) > 1:
-        data = data.transpose()[0]
-
-    spectrogram = sndtools.spectrogram.Spectrogram(data, window_width, window_step)
-    spec_view = sndtools.spectrogram.SpectrogramView(spectrogram, 1366)
+def run_interface(data, sample_rate, spectrogram, view_width):
+    spec_view = sndtools.spectrogram.SpectrogramView(spectrogram, view_width)
     cv.NamedWindow("Spectrogram")
 
     p = pyaudio.PyAudio()
@@ -43,15 +36,17 @@ def main():
 
     direction = 1
     paused = False
-    samples_read = 0
+    current_sample = 0
     while True:
 
         if not paused:
-            next_samples_read = max(min(len(data), samples_read + direction*2048), 0)
-            stream.write(data[samples_read:next_samples_read:direction].tostring())
-            samples_read = next_samples_read
+            slice_end = current_sample + direction*2048
+            slice_end = max(min(slice_end, len(data)), 0)
+            data_slice = data[current_sample:slice_end:direction]
+            stream.write(data_slice.tostring())
+            current_sample = slice_end
 
-        img = spec_view.view(samples_read)
+        img = spec_view.view(current_sample)
         cv.ShowImage("Spectrogram", img)
         key = chr(cv.WaitKey(5) & 255)
 
@@ -67,7 +62,34 @@ def main():
 
     p.terminate()
 
+
 if __name__ == "__main__":
-    #import cProfile
-    #cProfile.run("main()")
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("sound_file",
+        help="Sound file of which to generate the spectrogram")
+    parser.add_argument("-w --window-width", dest="window_width", type=int,
+        default=20,
+        help="Size of the moving window in milliseconds")
+    parser.add_argument("-s --window-step", dest="window_step", type=int,
+        default=5,
+        help="""Step between windows in milliseconds. If this is less than
+        window_size, the windows will overlap. If it is more, the windows will
+        have gaps between them.""")
+    args = parser.parse_args()
+
+    sample_rate, data = sndtools.io.read(args.sound_file)
+
+    # Window measured in number of samples
+    window_width = args.window_width / 1000 * sample_rate
+    window_step = args.window_step / 1000 * sample_rate
+
+    # If stereo, take left channel
+    if len(data.shape) > 1:
+        data = data.transpose()[0]
+
+    spectrogram = sndtools.spectrogram.Spectrogram(
+        data, window_width, window_step
+    )
+    run_interface(data, sample_rate, spectrogram, 1366)
