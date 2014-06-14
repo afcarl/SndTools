@@ -79,6 +79,8 @@ if __name__ == "__main__":
         have gaps between them.""")
     parser.add_argument("-d --display-width", dest="display_width", type=int,
         default=1024, help="Width in pixels of the live display.")
+    parser.add_argument("-o --output", dest="out_filename", default=None,
+        action="store", help="Do not display interface, but output image file.")
     args = parser.parse_args()
 
     sample_rate, data = sndtools.io.read(args.sound_file)
@@ -94,4 +96,8 @@ if __name__ == "__main__":
     spectrogram = sndtools.spectrogram.Spectrogram(
         data, window_width, window_step
     )
-    run_interface(data, sample_rate, spectrogram, args.display_width)
+
+    if args.out_filename is None:
+        run_interface(data, sample_rate, spectrogram, args.display_width)
+    else:
+        cv.SaveImage(args.out_filename, spectrogram.get_image())
