@@ -52,9 +52,9 @@ def run_interface(data, sample_rate, spectrogram, view_width):
 
         if key == ' ':
             paused = not paused
-        elif key in ['r', 'R']:
+        elif key in ('r', 'R'):
             direction = -1*direction
-        elif key in ['q', 'Q']:
+        elif key in ('q', 'Q'):
             break
 
     stream.stop_stream()
@@ -77,6 +77,8 @@ if __name__ == "__main__":
         help="""Step between windows in milliseconds. If this is less than
         window_size, the windows will overlap. If it is more, the windows will
         have gaps between them.""")
+    parser.add_argument("-d --display-width", dest="display_width", type=int,
+        default=1024, help="Width in pixels of the live display.")
     args = parser.parse_args()
 
     sample_rate, data = sndtools.io.read(args.sound_file)
@@ -92,4 +94,4 @@ if __name__ == "__main__":
     spectrogram = sndtools.spectrogram.Spectrogram(
         data, window_width, window_step
     )
-    run_interface(data, sample_rate, spectrogram, 1366)
+    run_interface(data, sample_rate, spectrogram, args.display_width)
