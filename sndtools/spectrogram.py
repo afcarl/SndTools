@@ -107,7 +107,7 @@ class Spectrogram(object):
 
 class SpectrogramView(object):
     """
-    TODO
+    Produce images showing slices of the spectrogram.
     """
 
     def __init__(self, spectrogram, display_width=1024, precalc_first_view=True):

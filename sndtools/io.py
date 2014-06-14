@@ -8,17 +8,23 @@ VLC_COMMAND = "vlc"
 
 
 def read(filename):
-    """Returns (sample_rate, data) tuple for the given sound file.
+    """Read a sound file into a raw sample array.
 
-    Sample width is always 2 bytes, so data is a list of integers between
-    -32767 to 32768.
+    Returns:
+        (sample_rate, data) tuple for the given sound file. ``data`` is a numpy
+        array of integer samples from -32767 to 32768. If the sound file is
+        stereo, the array will be n by 2, where n is the number of samples.
+
+    Tip: Use this snippet to take only the left channel of data::
+
+        if len(data.shape) > 1:
+            data = data.transpose()[0]
 
     Internally vlc is used to convert the file to a 16-bit wav file that
     scipy.io.wavfile can read. This function can read any file that vlc can.
 
     TODO: Skip vlc conversion if file is already 16-bit wav.
     TODO: Alternatively use mencoder.
-    TODO: What about stereo sound files?
 
     """
 
