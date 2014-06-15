@@ -23,9 +23,24 @@ def read(filename):
     Internally vlc is used to convert the file to a 16-bit wav file that
     scipy.io.wavfile can read. This function can read any file that vlc can.
 
-    TODO: Skip vlc conversion if file is already 16-bit wav.
     TODO: Alternatively use mencoder.
 
+    """
+
+    try:
+        sample_rate, data = wavfile.read(filename)
+    except ValueError:
+        # Fallback to conversion with vlc
+        wav_filename = _convert_vlc(filename)
+        sample_rate, data = wavfile.read(wav_filename)
+        os.remove(wav_filename)
+
+    return sample_rate, data
+
+def _convert_vlc(filename):
+    """
+    Converts a sound file readable by vlc to a 16-bit wav. Stores the result in
+    a new temporary file.
     """
 
     # Convert to wav 16 bit
@@ -39,9 +54,4 @@ def read(filename):
     ]
     subprocess.check_output(command)
 
-    # Read wav
-    sample_rate, data = wavfile.read(wav_filename)
-
-    os.remove(wav_filename)
-    return sample_rate, data
-
+    return wav_filename
