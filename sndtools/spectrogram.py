@@ -1,7 +1,7 @@
 import numpy
 
 from scipy import signal
-from scipy.fftpack import rfft
+from scipy import fftpack
 
 import cv
 
@@ -93,8 +93,13 @@ class Spectrogram(object):
         if self.taper is not None:
             window = window * self.taper
 
-        fft_data = rfft(window)
+        fft_data = fftpack.fft(window)
         fft_data = fft_data[:len(fft_data)//2][::-1]
+
+        # Take magnitude of imaginary fft output
+        # Faster version of:
+        #   >>> map(lambda x: sqrt(x.real**2 + x.imag**2), fft_data)
+        fft_data = numpy.absolute(fft_data)
 
         if self.smooth_kernel is not None:
             fft_data = signal.convolve(fft_data, self.smooth_kernel, mode="same")
