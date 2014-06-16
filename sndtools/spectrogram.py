@@ -15,7 +15,17 @@ class Spectrogram(object):
     TODO: What about the maximum frequency (height) of the spectrogram?
     """
 
-    def __init__(self, data, window_width, window_step):
+    # Maps names of taper windows to a function generating the taper window
+    # given the window width.
+    _taper_funcs = {
+        "blackman": lambda w: numpy.blackman(w),
+        "bartlett": lambda w: numpy.bartlett(w),
+        "hamming": lambda w: numpy.hamming(w),
+        "hanning": lambda w: numpy.hanning(w),
+        "none": lambda w: None,
+    }
+
+    def __init__(self, data, window_width, window_step, taper=None):
         """
         Args:
             data: The samples to calculate the spectrogram of. Should be a list
@@ -23,6 +33,12 @@ class Spectrogram(object):
             window_width: Width of the moving fourier transform window.
             window_step: Window step size. If this is less than window_width,
                 the windows will overlap.
+            taper: Taper to apply to the window before performing fourier
+                transform. Must be an array of floats of length
+                ``window_width``. Alternatively, the following strings can be
+                passed in to use some well known taper functions: "blackman",
+                "bartlett", "hamming", "hanning", "none". If "none" or None
+                (default) is given, no taper will be used.
 
         TODO: Add options for taper function and smoothing.
         """
@@ -36,8 +52,17 @@ class Spectrogram(object):
         # The spectrogram image itself
         self.img = cv.CreateImage((self.n_windows, self.height), 8, 3)
 
-        self.taper = None
-        #self.taper = numpy.blackman(window_width)
+        if isinstance(taper, basestring):
+            taper = taper.lower()
+            if taper not in self._taper_funcs:
+                raise ValueError('"taper" argument is a string ("{}"), but '
+                                 'not one of the possible predefined taper '
+                                 'windows: {}'.format(taper, self._taper_funcs.keys()))
+            self.taper = self._taper_funcs[taper](window_width)
+        elif taper is None:
+            self.taper = None
+        else:
+            self.taper = numpy.array(taper)
 
         self.smooth_kernel = None
         #self.smooth_kernel = signal.gaussian(5, 1)

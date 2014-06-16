@@ -94,7 +94,7 @@ if __name__ == "__main__":
         data = data.transpose()[0]
 
     spectrogram = sndtools.spectrogram.Spectrogram(
-        data, window_width, window_step
+        data, window_width, window_step, "blackman"
     )
 
     if args.out_filename is None:
