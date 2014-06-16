@@ -150,7 +150,7 @@ class SpectrogramView(object):
                 the first ``display_width`` windows durring initialization.
         """
         self.spectrogram = spectrogram
-        self.display_width = display_width
+        self.display_width = min(display_width, spectrogram.n_windows)
         self.display_img = cv.CreateImage((self.display_width, self.spectrogram.height), 8, 3)
 
         if precalc_first_view:
