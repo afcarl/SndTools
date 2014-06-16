@@ -35,11 +35,10 @@ def run_interface(data, sample_rate, spectrogram, view_width):
     print CONTROLS_HELP
 
     direction = 1
-    paused = False
     current_sample = 0
     while True:
 
-        if not paused:
+        if stream.is_active():
             slice_end = current_sample + direction*2048
             slice_end = max(min(slice_end, len(data)), 0)
             data_slice = data[current_sample:slice_end:direction]
@@ -51,7 +50,10 @@ def run_interface(data, sample_rate, spectrogram, view_width):
         key = chr(cv.WaitKey(5) & 255)
 
         if key == ' ':
-            paused = not paused
+            if stream.is_active():
+                stream.stop_stream()
+            else:
+                stream.start_stream()
         elif key in ('r', 'R'):
             direction = -1*direction
         elif key in ('q', 'Q'):
