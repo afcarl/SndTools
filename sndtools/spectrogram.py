@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy
 
 from scipy import signal
@@ -12,7 +13,13 @@ class Spectrogram(object):
     The data is split into windows (possibly overlapping). The fourier
     transform is calculated in each window.
 
+    This class is lazy. It doesn't calculate the spectrogram until the actual
+    data is requested. If you want the whole spectrogram image, you can call
+    ``get_image()``. Otherwise, you can call ``calculate``, then access the
+    ``img`` element directly.
+
     TODO: What about the maximum frequency (height) of the spectrogram?
+
     """
 
     # Maps names of taper windows to a function generating the taper window
@@ -77,7 +84,7 @@ class Spectrogram(object):
             shows the fourier transform of a window, with time going from left
             to right.
         """
-        self.calculate_up_to(self.n_windows)
+        self.calculate(0, self.n_windows)
         return cv.CloneImage(self.img)
 
     def window_from_sample(self, sample_idx):
@@ -93,18 +100,47 @@ class Spectrogram(object):
             (sample_idx - self.window_width) // self.window_step
         )
 
-    def calculate_up_to(self, window_idx):
+    def calculate(self, start, end):
         """
-        Calculates the fft up to the given ``window_idx``.
+        Calculates the fft in the range [start, end), store result in ``img``.
 
-        Users don't normally need to use this. It's useful if you're using the
-        ``img`` attribute directly and need to ensure that the spectrogram is
-        calculated up to a certain point.
+        This is useful if you're using the ``img`` attribute directly and need
+        to ensure that the spectrogram is calculated up to a certain point. If
+        you just want the whole image, call ``get_image()``.
         """
-        window_idx = int(window_idx)
-        for x in xrange(self._next_window, window_idx):
+        #TODO: Don't ignore start, implement a smarter lazy system.
+        end = int(end)
+        for x in xrange(self._next_window, end):
             self.write_fft(x)
-        self._next_window = window_idx
+        self._next_window = end
+
+    def get_slice(self, start, end):
+        """
+        Calculates and returns the spectrogram in the range [start, end).
+        """
+        start, end = int(start), int(end)
+        width = end - start
+        if width < 0:
+            raise ValueError("start cannot be greater than end.")
+        if end > self.n_windows:
+            raise ValueError("end cannot be greater than n_windows.")
+        if start < 0:
+            raise ValueError("start cannot be less than zero.")
+
+        out = cv.CreateImage((width, self.height), 8, 3)
+        self.calculate(start, end)
+
+        # Copy slice of self.img to out
+        roi = (
+            start, 0,
+            width, self.height
+        )
+        original_roi = cv.GetImageROI(self.img)
+        cv.SetImageROI(self.img, roi)
+        cv.Copy(self.img, out)
+        cv.SetImageROI(self.img, original_roi)
+
+        return out
 
     def write_fft(self, window_idx):
         """Write a single column of the spectrogram."""
@@ -151,10 +187,9 @@ class SpectrogramView(object):
         """
         self.spectrogram = spectrogram
         self.display_width = min(display_width, spectrogram.n_windows)
-        self.display_img = cv.CreateImage((self.display_width, self.spectrogram.height), 8, 3)
 
         if precalc_first_view:
-            self.spectrogram.calculate_up_to(display_width)
+            self.spectrogram.calculate(0, display_width)
 
     def view(self, sample_idx):
         """
@@ -182,23 +217,12 @@ class SpectrogramView(object):
         else:
             view_start = window_idx - self.display_width//2
 
-        # Calculate fft on demand
-        self.spectrogram.calculate_up_to(view_start + self.display_width)
-
-        # Copy full spectogram, self.spectrogram.img, to self.display_img
-        roi = (
-            int(view_start), 0,
-            self.display_width, self.spectrogram.height
-        )
-        original_roi = cv.GetImageROI(self.spectrogram.img)
-        cv.SetImageROI(self.spectrogram.img, roi)
-        cv.Copy(self.spectrogram.img, self.display_img)
-        cv.SetImageROI(self.spectrogram.img, original_roi)
+        img = self.spectrogram.get_slice(view_start, view_start + self.display_width)
 
         # Draw line for current window
-        for y in xrange(self.display_img.height):
-            x = min(int(window_idx - view_start), self.display_img.width-1)
-            v = 255 - cv.Get2D(self.display_img, y, x)[0]
-            cv.Set2D(self.display_img, y, x, (v, v, v))
+        for y in xrange(img.height):
+            x = min(int(window_idx - view_start), img.width-1)
+            v = 255 - cv.Get2D(img, y, x)[0]
+            cv.Set2D(img, y, x, (v, v, v))
 
-        return cv.CloneImage(self.display_img)
+        return img
