@@ -16,7 +16,7 @@ class Spectrogram(object):
     This class is lazy. It doesn't calculate the spectrogram until the actual
     data is requested. If you want the whole spectrogram image, you can call
     ``get_image()``. Otherwise, you can call ``calculate``, then access the
-    ``img`` element directly.
+    ``spec`` element directly.
 
     TODO: What about the maximum frequency (height) of the spectrogram?
 
@@ -57,7 +57,7 @@ class Spectrogram(object):
         self.height = int(window_width // 2)
 
         # The spectrogram image itself
-        self.img = cv.CreateImage((self.n_windows, self.height), 8, 3)
+        self.spec = numpy.ndarray((self.n_windows, self.height), dtype=numpy.uint8)
 
         if isinstance(taper, basestring):
             taper = taper.lower()
@@ -84,8 +84,7 @@ class Spectrogram(object):
             shows the fourier transform of a window, with time going from left
             to right.
         """
-        self.calculate(0, self.n_windows)
-        return cv.CloneImage(self.img)
+        return self.get_slice(0, self.n_windows)
 
     def window_from_sample(self, sample_idx):
         """Return the window index of the given index into data.
@@ -102,11 +101,12 @@ class Spectrogram(object):
 
     def calculate(self, start, end):
         """
-        Calculates the fft in the range [start, end), store result in ``img``.
+        Calculates the fft in the range [start, end), store result in
+        ``spec``.
 
-        This is useful if you're using the ``img`` attribute directly and need
-        to ensure that the spectrogram is calculated up to a certain point. If
-        you just want the whole image, call ``get_image()``.
+        This is useful if you're using the ``spec`` attribute directly and
+        need to ensure that the spectrogram is calculated up to a certain
+        point. If you just want the whole image, call ``get_image()``.
         """
         #TODO: Don't ignore start, implement a smarter lazy system.
         end = int(end)
@@ -127,20 +127,22 @@ class Spectrogram(object):
         if start < 0:
             raise ValueError("start cannot be less than zero.")
 
-        out = cv.CreateImage((width, self.height), 8, 3)
         self.calculate(start, end)
 
-        # Copy slice of self.img to out
-        roi = (
-            start, 0,
-            width, self.height
-        )
-        original_roi = cv.GetImageROI(self.img)
-        cv.SetImageROI(self.img, roi)
-        cv.Copy(self.img, out)
-        cv.SetImageROI(self.img, original_roi)
+        # Convert to OpenCV Image
+        # Partially based on:
+        # http://www.socouldanyone.com/2013/03/converting-grayscale-to-rgb-with-numpy.html
+        #TODO: This is a bit messy, but it will be removed when OpenCV is no
+        #      longer a dependancy.
+        gray = self.spec[start:end].transpose()
+        rgb = numpy.empty(gray.shape + (3,), dtype=numpy.uint8)
+        rgb[:, :, 2] = rgb[:, :, 1] = rgb[:, :, 0] = gray
+        mat = cv.fromarray(rgb)
+        img = cv.CreateImage((mat.width, mat.height), 8, 3)
+        cv.Copy(mat, img)
+        return img
 
-        return out
+        #return self.spec[start:end]
 
     def write_fft(self, window_idx):
         """Write a single column of the spectrogram."""
@@ -165,10 +167,8 @@ class Spectrogram(object):
         if self.smooth_kernel is not None:
             fft_data = signal.convolve(fft_data, self.smooth_kernel, mode="same")
 
-        for i, x in enumerate(fft_data):
-            # TODO: Better scaling
-            v = min(255, 32*x // 65535)
-            cv.Set2D(self.img, i, window_idx, (v, v, v))
+        fft_data = map(lambda x: min(255, 32*x // 65535), fft_data)
+        self.spec[window_idx] = fft_data
 
 
 class SpectrogramView(object):
