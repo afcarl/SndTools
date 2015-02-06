@@ -16,20 +16,23 @@ import sndtools
 
 CONTROLS_HELP = """
 Controls:
-    Space - Pause
-      q   - Quit
-      r   - Reverse direction
+    Space  : Pause
+      q    : Quit
+      r    : Reverse direction
+    + / -  : Speed increase / decrease
 """
+MIN_SPEED = 0.05
+MAX_SPEED = 4
 
 
-def run_interface(data, sample_rate, spectrogram, view_width):
+def run_interface(data, sample_rate, spectrogram, view_width, speed=1):
     spec_view = sndtools.spectrogram.SpectrogramView(spectrogram, view_width)
     cv.NamedWindow("Spectrogram")
 
     p = pyaudio.PyAudio()
     stream = p.open(format=p.get_format_from_width(2),
                     channels=1,
-                    rate=sample_rate,
+                    rate=int(sample_rate * speed),
                     output=True)
 
     print CONTROLS_HELP
@@ -58,6 +61,18 @@ def run_interface(data, sample_rate, spectrogram, view_width):
             direction = -1*direction
         elif key in ('q', 'Q'):
             break
+        elif key in ('+', '=', '-', '_'):
+            if key in ('+', '='):
+                speed += 0.1
+            else:
+                speed -= 0.1
+            speed = min(MAX_SPEED, max(0.1, speed))
+            print "Speed:", speed
+            stream.close()
+            stream = p.open(format=p.get_format_from_width(2),
+                            channels=1,
+                            rate=int(sample_rate * speed),
+                            output=True)
 
     stream.stop_stream()
     stream.close()
@@ -83,7 +98,12 @@ if __name__ == "__main__":
         default=1024, help="Width in pixels of the live display.")
     parser.add_argument("-o --output", dest="out_filename", default=None,
         action="store", help="Do not display interface, but output image file.")
+    parser.add_argument("--speed", type=float, default=1,
+        help="""Playback speed multiplier, default 1.""")
     args = parser.parse_args()
+
+    if args.speed < MIN_SPEED or args.speed > MAX_SPEED:
+        parser.error("Speed must be in range {} - {}".format(MIN_SPEED, MAX_SPEED))
 
     sample_rate, data = sndtools.io.read(args.sound_file)
 
@@ -100,6 +120,7 @@ if __name__ == "__main__":
     )
 
     if args.out_filename is None:
-        run_interface(data, sample_rate, spectrogram, args.display_width)
+        run_interface(data, sample_rate, spectrogram,
+                      args.display_width, speed=args.speed)
     else:
         cv.SaveImage(args.out_filename, spectrogram.get_image())
