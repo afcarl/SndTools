@@ -50,7 +50,7 @@ class Spectrogram(object):
         TODO: Add options for taper function and smoothing.
         """
         self.data = numpy.array(data)
-        self.window_width = window_width
+        self.window_width = int(window_width)
         self.window_step = window_step
 
         self.n_windows = int((len(data) - window_width) // window_step) + 1
@@ -170,6 +170,10 @@ class Spectrogram(object):
         fft_data = map(lambda x: min(255, 32*x // 65535), fft_data)
         self.spec[window_idx] = fft_data
 
+    def get_freq_at_pos(self, y, sample_rate=1):
+        freqs = numpy.fft.fftfreq(self.window_width, 1/sample_rate)
+        return freqs[y]
+
 
 class SpectrogramView(object):
     """
@@ -187,9 +191,11 @@ class SpectrogramView(object):
         """
         self.spectrogram = spectrogram
         self.display_width = min(display_width, spectrogram.n_windows)
+        self.height = None
 
         if precalc_first_view:
             self.spectrogram.calculate(0, display_width)
+        #self.spectrogram.calculate(0, spectrogram.n_windows)
 
     def view(self, sample_idx):
         """
@@ -218,6 +224,7 @@ class SpectrogramView(object):
             view_start = window_idx - self.display_width//2
 
         img = self.spectrogram.get_slice(view_start, view_start + self.display_width)
+        self.height = img.height
 
         # Draw line for current window
         for y in xrange(img.height):

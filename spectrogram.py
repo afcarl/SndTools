@@ -25,9 +25,18 @@ MIN_SPEED = 0.05
 MAX_SPEED = 4
 
 
+def mouse_callback(event, x, y, flags, user_data):
+    spec_view, sample_rate = user_data
+    if event == cv.CV_EVENT_LBUTTONDOWN:
+        print spec_view.spectrogram.get_freq_at_pos(
+            spec_view.height-y-1,
+            sample_rate
+        )
+
 def run_interface(data, sample_rate, spectrogram, view_width, speed=1):
     spec_view = sndtools.spectrogram.SpectrogramView(spectrogram, view_width)
     cv.NamedWindow("Spectrogram")
+    cv.SetMouseCallback("Spectrogram", mouse_callback, (spec_view, sample_rate))
 
     p = pyaudio.PyAudio()
     stream = p.open(format=p.get_format_from_width(2),
